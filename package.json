@@ -10,14 +10,30 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:elispir.sendSelected"
+    "onCommand:elispir.sendText",
+    "onCommand:elispir.sendFile",
+    "onCommand:elispir.reload",
+    "onCommand:elispir.sendAllLinesAbove"
+
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "elispir.sendSelected",
-        "title": "sendSelected"
+        "command": "elispir.reload",
+        "title": "reload"
+      },
+      {
+        "command": "elispir.sendText",
+        "title": "sendText"
+      },
+      {
+        "command": "elispir.sendFile",
+        "title": "sendFile"
+      },
+      {
+        "command": "elispir.sendAllLinesAbove",
+        "title": "sendAllLinesAbove"
       }
     ]
   },
