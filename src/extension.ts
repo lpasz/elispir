@@ -1,25 +1,55 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
 let terminal: vscode.Terminal | null = null;
+const config = vscode.workspace.getConfiguration('elispir');
+
+/// EXPERIMENTAL, STILL BROKEN.
+const getTerminalText = async () => {
+	let previousCopyPaste = await vscode.env.clipboard.readText()
+
+	await vscode.commands.executeCommand('workbench.action.terminal.selectToPreviousLine')
+	await vscode.commands.executeCommand('workbench.action.terminal.copySelection')
+	await vscode.commands.executeCommand('workbench.action.terminal.clearSelection')
+	await vscode.commands.executeCommand('workbench.action.terminal.')
+
+	let lastTerminalCommand = await vscode.env.clipboard.readText()
+
+	await vscode.env.clipboard.writeText(previousCopyPaste);
+
+	console.log({ lastTerminalCommand })
+}
 
 const createTerminal = async () => {
-	if (!terminal) {
+	if (!terminal || terminal?.exitStatus) {
 		terminal = vscode.window.createTerminal("Integrated Terminal")
 		terminal.show(true)
-		terminal.sendText("iex")
+		const startCmd = config.get('iexCommand') as string
+		terminal.sendText(startCmd)
 	}
+}
+
+const getSelectedText = (editor: vscode.TextEditor): string => {
+	var selection = editor.selection
+	return editor.document.getText(selection)
+}
+
+const getCurrentLineText = (editor: vscode.TextEditor): string => {
+	const { text } = editor?.document.lineAt(editor.selection.active.line);
+	return text;
+}
+
+const getAllLinesAbove = (editor: vscode.TextEditor, currentLine: number): string => {
+	let allLinesAboveText = "";
+	for (let index = 0; index < currentLine; index++) {
+		const { text } = editor?.document.lineAt(index)
+		allLinesAboveText = allLinesAboveText + text + "\n";
+	}
+	return allLinesAboveText;
 }
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "elispir" is now active!');
-
 	let reload = vscode.commands.registerCommand('elispir.reload', async () => {
 		await createTerminal();
 		const editor = vscode.window.activeTextEditor;
@@ -31,14 +61,15 @@ export function activate(context: vscode.ExtensionContext) {
 		await createTerminal();
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
-			var selection = editor.selection
-			var selectionText = editor.document.getText(selection)
-			if (selectionText) {
-				if (selectionText) terminal?.sendText(selectionText, true)
+			const selectedText = getSelectedText(editor)
+			if (selectedText) {
+				terminal?.sendText(selectedText, true)
 			} else {
-				const { text } = editor?.document.lineAt(editor.selection.active.line);
-				if (text) terminal?.sendText(text, true);
+				const currentLineText = getCurrentLineText(editor)
+				terminal?.sendText(currentLineText, true)
 			}
+
+			getTerminalText()
 		}
 	});
 
@@ -52,17 +83,14 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let sendAllLinesAbove = vscode.commands.registerCommand('elispir.sendAllLinesAbove', async () => {
+
 		await createTerminal();
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
 			const currentLine = editor.selection.active.line;
-			let allLinesAboveText = "";
-			for (let index = 0; index < currentLine; index++) {
-				const { text } = editor?.document.lineAt(index)
-				allLinesAboveText = allLinesAboveText + text + "\n";
-			}
-			terminal?.sendText(allLinesAboveText, true)
-			console.log({terminal})
+			const allLinesAbove = getAllLinesAbove(editor, currentLine)
+			terminal?.sendText(allLinesAbove, true)
+			console.log({ terminal })
 		}
 	});
 
@@ -73,5 +101,4 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(reload);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() { }
