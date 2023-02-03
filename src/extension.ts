@@ -67,9 +67,9 @@ export function activate(context: vscode.ExtensionContext) {
 			} else {
 				const currentLineText = getCurrentLineText(editor)
 				terminal?.sendText(currentLineText, true)
-				setTimeout(() => getTerminalText(editor), 100);
 			}
 
+			setTimeout(() => getTerminalText(editor), 500);
 		}
 	});
 
@@ -109,12 +109,17 @@ export function activate(context: vscode.ExtensionContext) {
 		await vscode.commands.executeCommand('workbench.action.terminal.clearSelection')
 		await vscode.commands.executeCommand('workbench.action.terminal.scrollToBottom')
 		await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup')
-
-		const lastTerminalCommand = await (await vscode.env.clipboard.readText()).split("\n").at(-1)
+		const lastLineOfTerminal = await vscode.env.clipboard.readText()
+		console.log({ lastLineOfTerminal })
+		const lastTerminalCommand = lastLineOfTerminal.split("\n").at(-1)
 		console.log({ lastTerminalCommand })
 		await vscode.env.clipboard.writeText(previousCopyPaste)
-		const line = editor?.document.lineAt(editor.selection.active.line)
-		decorators = [{ range: line.range, hoverMessage: lastTerminalCommand }];
+		if (getSelectedText(editor)) {
+			decorators = [{ range: editor.selection, hoverMessage: lastTerminalCommand }];
+		} else {
+			const line = editor.document.lineAt(editor.selection.active.line)
+			decorators = [{ range: line.range, hoverMessage: lastTerminalCommand }];
+		}
 	}
 
 	const createTerminal = async () => {
