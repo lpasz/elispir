@@ -7,21 +7,6 @@ const config = vscode.workspace.getConfiguration('elispir');
 export function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timer | undefined = undefined;
 
-	vscode.window.onDidChangeActiveTextEditor(editor => {
-		activeEditor = editor;
-		if (editor) {
-			decorators = []
-			triggerUpdateDecorations();
-		}
-	}, null, context.subscriptions);
-
-	vscode.workspace.onDidChangeTextDocument(event => {
-		if (activeEditor && event.document === activeEditor.document) {
-			decorators = []
-			triggerUpdateDecorations(true);
-		}
-	}, null, context.subscriptions);
-
 	// create a decorator type that we use to decorate small numbers
 	const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
 		borderWidth: '1px',
@@ -94,14 +79,13 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let sendAllLinesAbove = vscode.commands.registerCommand('elispir.sendAllLinesAbove', async () => {
-
 		await createTerminal();
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
 			const currentLine = editor.selection.active.line;
 			const allLinesAbove = getAllLinesAbove(editor, currentLine)
 			terminal?.sendText(allLinesAbove, true)
-			console.log({ terminal })
+			setTimeout(() => getTerminalText(editor), 500);
 		}
 	});
 
@@ -121,13 +105,15 @@ export function activate(context: vscode.ExtensionContext) {
 		await vscode.commands.executeCommand('workbench.action.terminal.scrollToBottom')
 		await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup')
 		const lastLineOfTerminal = await vscode.env.clipboard.readText()
-		console.log({ lastLineOfTerminal })
-		const lastTerminalCommand = lastLineOfTerminal.split("\n").at(-1)
-		console.log({ lastTerminalCommand })
+		const lastTerminalCommand = lastLineOfTerminal?.split("iex(")?.at(-1)?.split("\n").slice(1).join("\n")
+
 		await vscode.env.clipboard.writeText(previousCopyPaste)
-
-		decorators = [{ range: editor.selection, hoverMessage: lastLineOfTerminal.split("iex(")?.at(-1)?.split("\n").slice(1).join("\n") }];
-
+		if (getSelectedText(editor)) {
+			decorators = [{ range: editor.selection, hoverMessage: lastTerminalCommand }];
+		} else {
+			const line = editor.document.lineAt(editor.selection.active.line)
+			decorators = [{ range: line.range, hoverMessage: lastTerminalCommand }];
+		}
 	}
 
 	const createTerminal = async () => {
