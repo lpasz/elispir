@@ -1,14 +1,26 @@
 import * as vscode from 'vscode';
-import { Range } from 'vscode';
 
 let terminal: vscode.Terminal | null = null;
 let decorators: vscode.DecorationOptions[] = []
 const config = vscode.workspace.getConfiguration('elispir');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timer | undefined = undefined;
+
+	vscode.window.onDidChangeActiveTextEditor(editor => {
+		activeEditor = editor;
+		if (editor) {
+			decorators = []
+			triggerUpdateDecorations();
+		}
+	}, null, context.subscriptions);
+
+	vscode.workspace.onDidChangeTextDocument(event => {
+		if (activeEditor && event.document === activeEditor.document) {
+			decorators = []
+			triggerUpdateDecorations(true);
+		}
+	}, null, context.subscriptions);
 
 	// create a decorator type that we use to decorate small numbers
 	const smallNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -33,7 +45,6 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		activeEditor.setDecorations(smallNumberDecorationType, decorators);
-		setTimeout(() => vscode.commands.executeCommand('editor.action.showHover'), 100);
 	}
 
 	function triggerUpdateDecorations(throttle = false) {
@@ -114,12 +125,9 @@ export function activate(context: vscode.ExtensionContext) {
 		const lastTerminalCommand = lastLineOfTerminal.split("\n").at(-1)
 		console.log({ lastTerminalCommand })
 		await vscode.env.clipboard.writeText(previousCopyPaste)
-		if (getSelectedText(editor)) {
-			decorators = [{ range: editor.selection, hoverMessage: lastTerminalCommand }];
-		} else {
-			const line = editor.document.lineAt(editor.selection.active.line)
-			decorators = [{ range: line.range, hoverMessage: lastTerminalCommand }];
-		}
+
+		decorators = [{ range: editor.selection, hoverMessage: lastLineOfTerminal.split("iex(")?.at(-1)?.split("\n").slice(1).join("\n") }];
+
 	}
 
 	const createTerminal = async () => {
